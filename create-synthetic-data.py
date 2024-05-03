@@ -48,13 +48,16 @@ synthetic_df = pd.DataFrame(synthetic_data, columns=['link', 'location', 'time',
 # Save the synthetic data to a CSV file
 synthetic_df.to_csv('data/synthetic_data.csv', index=False)
 
+
+
 # create a subset with single combination of link/location
 sample_df = synthetic_df[['link','location']].drop_duplicates().sample()
 link_pick = sample_df['link'].values[0]
 location_pick = sample_df['location'].values[0]
 
+simple_synt_df = synthetic_df[(synthetic_df.link == link_pick) & (synthetic_df.location == location_pick)]
 
-simple_synt_df = sample_df[(sample_df.link == link_pick) & (sample_df.location == location_pick)]
+print('simple_synth_df.shape',simple_synt_df.shape)
 
 
 simple_synt_df.to_csv('data/simple_synthetic_data.csv', index=False)

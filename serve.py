@@ -180,13 +180,13 @@ def forecast_traffic(args):
     # cdsw.track_metric("input_rx_data", list(rx_bytes))
     # cdsw.track_metric("input_tx_data", list(tx_bytes))
     cdsw.track_metric("input_rx_data", args['rx_gbs'])
-    cdsw.track_metric("input_tx_data", args['tx_gbs'])
+    #cdsw.track_metric("input_tx_data", args['tx_gbs'])
 
     print('done with input metrics recorded')
     
     # Track our prediction
-    cdsw.track_metric("rx bytes prediction", list(prediction[:, :,0]))
-    cdsw.track_metric("tx bytes prediction", list(prediction[:, :,1]))
+#    cdsw.track_metric("rx bytes prediction", list(prediction[:, :,0]))
+#    cdsw.track_metric("tx bytes prediction", list(prediction[:, :,1]))
 
     return output
 
