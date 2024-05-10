@@ -1,0 +1,7 @@
+numpy
+pandas
+mlflow
+matplotlib
+seaborn
+graphviz
+tensorflow==2.14.0

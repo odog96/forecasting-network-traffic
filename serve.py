@@ -114,7 +114,7 @@ def feature_create(df_in):
 
 @cdsw.model_metrics
 def forecast_traffic(args):
-    print(args)  
+    print('type of args[\'rx_gbs\']',type(args['rx_gbs']))  
 
     
     input_ts_size = np.array(args['rx_gbs']).shape[0]
@@ -165,14 +165,19 @@ def forecast_traffic(args):
     print('model input built')
     
     prediction = recon_model.predict(model_input)
+    prediction = prediction.reshape((horizon,2))
     
     print('prediction made. See here:',prediction)
     
     start_ts = pd.to_datetime(df.time[:1].values[0]) + pd.Timedelta('1H')  # Start from the next timestamp, 1 hour later
     future_ts = pd.date_range(start=start_ts, periods=horizon, freq='1H')  # Generate timestamps in 1-hour increments
-        
-    output = {'rx_bytes': list(prediction[:, :,0]),'tx_bytes': list(prediction[:,:, 1]),\
-    'time': [time.isoformat() for time in future_ts]}  # Convert each timestamp to ISO 8601 string format
+    
+    horizon_time = [time.isoformat() for time in future_ts]
+    
+    print('horizon',horizon_time)
+    
+    output = {'rx_bytes': prediction[:,0].tolist(),'tx_bytes': prediction[:,1].tolist(),\
+    'time': horizon_time } # horizon_time}  # Convert each timestamp to ISO 8601 string format
 
     
         # Track inputs
@@ -180,13 +185,17 @@ def forecast_traffic(args):
     # cdsw.track_metric("input_rx_data", list(rx_bytes))
     # cdsw.track_metric("input_tx_data", list(tx_bytes))
     cdsw.track_metric("input_rx_data", args['rx_gbs'])
-    #cdsw.track_metric("input_tx_data", args['tx_gbs'])
+    cdsw.track_metric("input_tx_data", args['tx_gbs'])
 
     print('done with input metrics recorded')
+    print('type of list pred',prediction[:,0].tolist())
     
     # Track our prediction
-#    cdsw.track_metric("rx bytes prediction", list(prediction[:, :,0]))
-#    cdsw.track_metric("tx bytes prediction", list(prediction[:, :,1]))
+    cdsw.track_metric("rx bytes prediction", prediction[:,0].tolist())
+    cdsw.track_metric("tx bytes prediction", prediction[:,1].tolist())
+    
+    # track time predictions
+    cdsw.track_metric('forecast time',horizon_time)
 
     return output
 
