@@ -3,8 +3,10 @@ import numpy as np
 import os
 import cdsw
 import joblib
-
 from joblib import dump, load
+
+import glob
+
 
 import tensorflow as tf
 from tensorflow import keras
@@ -116,7 +118,6 @@ def feature_create(df_in):
 def forecast_traffic(args):
     print('type of args[\'rx_gbs\']',type(args['rx_gbs']))  
 
-    
     input_ts_size = np.array(args['rx_gbs']).shape[0]
     rx_bytes = np.array(args['rx_gbs']).reshape((input_ts_size,1))
     tx_bytes = np.array(args['tx_gbs']).reshape((input_ts_size,1))
@@ -152,12 +153,23 @@ def forecast_traffic(args):
     print('returned features')
     
     # Model loading
-    model_path = "/home/cdsw/model/lstm_model.keras"  # Consider making this configurable
-    if os.path.exists(model_path):
-        print('path exists')
-        recon_model = keras.models.load_model(model_path)
+    model_dir = "/home/cdsw/model"
+
+    # List all .keras files starting with 'lstm_model'
+    model_files = glob.glob(os.path.join(model_dir, 'lstm_model*.keras'))
+
+    # Sort the files by modification time in descending order
+    model_files.sort(key=os.path.getmtime, reverse=True)
+
+    # Check if we found any model files
+    if model_files:
+        # Load the most recent model
+        latest_model_path = model_files[0]
+        recon_model = keras.models.load_model(latest_model_path)
+        print(f'Model loaded from {latest_model_path}')
     else:
-        return {"error": "Model not found at specified path."}
+        # Handle the case where no model file was found
+        return {"error": "Model not found in the specified directory."}
     
     # Combine into a list for prediction as the model expects
     model_input = [temporal_features, non_temporal_features, semi_temporal_features]

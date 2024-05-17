@@ -8,7 +8,13 @@ import os
 import time
 from sklearn.metrics import root_mean_squared_error
 
+# this will be run as a job 
 
+if os.environ.get("MODEL_NAME") == "":
+    os.environ["MODEL_NAME"] = "lstm"
+if os.environ.get("PROJECT_NAME") == "":
+    os.environ["PROJECT_NAME"] = "SDWAN"
+    
 window = 24
 
 # function(s)
@@ -39,13 +45,14 @@ df = pd.read_csv('data/simple_synthetic_data.csv')
 
 # sort data by time 
 df.sort_values(by=['time'],inplace=True)
-#select first 25
 
-# For starters inference can be made twice a day
 
+##########################################################################
+### CML Model API 
 # model parameter configuration
-model_name = "lstm-test2"
-project_name = 'ibm_poc'
+
+model_name = os.environ["MODEL_NAME"]
+project_name = os.environ["PROJECT_NAME"]
 client = cmlapi.default_client(url=os.getenv("CDSW_API_URL").replace("/api/v1", ""), cml_api_key=os.getenv("CDSW_APIV2_KEY"))
 target_model = client.list_all_models(search_filter=json.dumps({"name": model_name}))
 model_key = target_model.models[0].access_key
@@ -58,6 +65,8 @@ build_list = client.list_model_builds(project_id = proj_id, model_id = mod_id,so
 build_id = build_list.model_builds[-1].id
 model_deployments = client.list_model_deployments(project_id=proj_id,model_id=mod_id,build_id=build_id)
 cr_number = model_deployments.model_deployments[0].crn
+##########################################################################
+
 
 response_labels_sample = []
 
@@ -70,7 +79,12 @@ load_frequency = 2 # ratio of number of observations between load jobs
                    # this will determine heap size
     
 m_window = 10      # monitoring window size 
-    
+
+# code below slides through new data
+# each time taking window then taking 
+# 1 step forward of size 'stride'
+
+
 for j,i in enumerate(range(0,df.shape[0]-(window),stride)):
     temp_df = df.iloc[i:window+1+i,:] # 
     # convert input to json
@@ -88,7 +102,9 @@ for j,i in enumerate(range(0,df.shape[0]-(window),stride)):
     }
     response_labels_sample.append(new_item)
     
-    
+    ## Loading Ground Truth phase 
+    # at each load frequency ground truth values
+    # are uploaded
     if (j+1)%load_frequency == 0:
         recent_items = response_labels_sample[-load_frequency:]  # Get last load_frequency elements
 
@@ -106,10 +122,9 @@ for j,i in enumerate(range(0,df.shape[0]-(window),stride)):
             
         cdsw.track_delayed_metrics({"final_rx_gbs_label": rx_gbs_values,"final_tx_gbs_label": tx_gbs_values}, val["uuid"])
             
-        # fetch from the input data base
-        # gather actuals for tx_gbs and rx_gbs
-        # track delayed metrics
-
+    # monitoring step - Calculates desired model metrics based on predifined 
+    # frequency
+            
     if (j+1)% m_window == 0:
         m_recent_items = response_labels_sample[-m_window:]  # Get last m_window elements
 
@@ -128,7 +143,6 @@ for j,i in enumerate(range(0,df.shape[0]-(window),stride)):
             all_rx_predictions.extend(item['rx_bytes_forecast'])
             all_tx_predictions.extend(item['tx_bytes_forecast'])
             
-        # Assuming the DataFrame 'df' is already sorted by time or indexed by time for faster access
         # Filter rows that match any of the collected timestamps
         filtered_all_horizon_times = [t.replace('T', ' ') for t in all_horizon_times]
         matched_rows = df[df['time'].isin(filtered_all_horizon_times)]
