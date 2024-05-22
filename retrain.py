@@ -56,6 +56,8 @@ batch = 32
 epochs = 50
 
 
+# read can later occur from iceberg table. 
+
 # Construct the argument parser
 parser = argparse.ArgumentParser()
 parser.add_argument('input_file', type=str, help='Path to the input CSV file')

@@ -11,7 +11,7 @@ from sklearn.metrics import root_mean_squared_error
 # this will be run as a job 
 
 if os.environ.get("MODEL_NAME") == "":
-    os.environ["MODEL_NAME"] = "lstm"
+    os.environ["MODEL_NAME"] = "LSTM-2"
 if os.environ.get("PROJECT_NAME") == "":
     os.environ["PROJECT_NAME"] = "SDWAN"
     
@@ -51,8 +51,10 @@ df.sort_values(by=['time'],inplace=True)
 ### CML Model API 
 # model parameter configuration
 
-model_name = os.environ["MODEL_NAME"]
-project_name = os.environ["PROJECT_NAME"]
+model_name = "LSTM-2"
+#os.environ["MODEL_NAME"]
+project_name = "SDWAN"
+#os.environ["PROJECT_NAME"]
 client = cmlapi.default_client(url=os.getenv("CDSW_API_URL").replace("/api/v1", ""), cml_api_key=os.getenv("CDSW_APIV2_KEY"))
 target_model = client.list_all_models(search_filter=json.dumps({"name": model_name}))
 model_key = target_model.models[0].access_key
@@ -78,7 +80,9 @@ load_frequency = 2 # ratio of number of observations between load jobs
 #load_lag = 1       # number of observation sets to load each load
                    # this will determine heap size
     
-m_window = 10      # monitoring window size 
+m_window = 14      # currently setting to weekly
+
+horizon = 6
 
 # code below slides through new data
 # each time taking window then taking 
@@ -102,11 +106,18 @@ for j,i in enumerate(range(0,df.shape[0]-(window),stride)):
     }
     response_labels_sample.append(new_item)
     
-    ## Loading Ground Truth phase 
-    # at each load frequency ground truth values
-    # are uploaded
-    if (j+1)%load_frequency == 0:
-        recent_items = response_labels_sample[-load_frequency:]  # Get last load_frequency elements
+# Load Ground Truth phase
+    if (j + 1) % load_frequency == 0:
+        load_flag = True
+        offset = load_frequency
+    elif j == len(range(0, df.shape[0] - (horizon) - (window), stride)) - 1:
+        load_flag = True
+        offset = (j + 1) % load_frequency
+    else:
+        load_flag = False
+        
+    if load_flag:
+        recent_items = response_labels_sample[-offset:]  # Get last load_frequency elements
 
         for val in recent_items:
             # Extract the horizon times for this entry
@@ -120,15 +131,25 @@ for j,i in enumerate(range(0,df.shape[0]-(window),stride)):
             rx_gbs_values = matched_rows['rx_gbs'].tolist()
             tx_gbs_values = matched_rows['tx_gbs'].tolist()
             
-        cdsw.track_delayed_metrics({"final_rx_gbs_label": rx_gbs_values,"final_tx_gbs_label": tx_gbs_values}, val["uuid"])
+            cdsw.track_delayed_metrics({"final_rx_gbs_label": rx_gbs_values,"final_tx_gbs_label": tx_gbs_values}, val["uuid"])
             
     # monitoring step - Calculates desired model metrics based on predifined 
     # frequency
-            
-    if (j+1)% m_window == 0:
-        m_recent_items = response_labels_sample[-m_window:]  # Get last m_window elements
+        # Monitoring step
+    if (j + 1) % m_window == 0:
+        monitor_flag = True
+        m_offset = m_window
+    elif j == len(range(0, df.shape[0] - (horizon) - (window), stride)) - 1:
+        monitor_flag = True
+        m_offset = (j + 1) % m_window
+    else:
+        monitor_flag = False
+    
+    if monitor_flag:
+        m_recent_items = response_labels_sample[-m_offset:]  # Get last m_window elements
 
         print('length of m recent items', len(m_recent_items))
+        print('iteration',j)
         
         start_timestamp_ms = m_recent_items[0]["timestamp_ms"]
         end_timestamp_ms = m_recent_items[-1]["timestamp_ms"]
@@ -159,6 +180,8 @@ for j,i in enumerate(range(0,df.shape[0]-(window),stride)):
         rmse_rx = root_mean_squared_error(actual_rx,all_rx_predictions)
         rmse_tx = root_mean_squared_error(actual_tx,all_tx_predictions)
 
+        # update this to include an aggregate score - look to see if we can do 2 d score calc.
+        
         rmse = (rmse_rx + rmse_tx)/2
 
         cdsw.track_aggregate_metrics(
@@ -167,3 +190,20 @@ for j,i in enumerate(range(0,df.shape[0]-(window),stride)):
                 end_timestamp_ms,
                 model_deployment_crn=cr_number,
             )
+        
+       
+        # kick off check model job.. have to to wait until at least 2nds week. 
+
+        # Get the identifier of the current project
+        
+        job_name = 'check_model'
+        target_job = client.list_jobs(proj_id, search_filter=json.dumps({"name": job_name}))
+        
+        if (j+1) > m_window:
+            job_run = client.create_job_run(
+            cmlapi.CreateJobRunRequest(),
+            project_id = proj_id, 
+            job_id = target_job.jobs[0].id
+            )
+            
+            # kick off check model job

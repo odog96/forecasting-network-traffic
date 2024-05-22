@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import json, requests
 import time
 import cdsw
 import cmlapi
@@ -13,8 +14,13 @@ if os.environ.get("PROJECT_NAME") == "":
     
     
     
-model_name = os.environ["MODEL_NAME"]
-project_name = os.environ["PROJECT_NAME"]
+# model_name = os.environ["MODEL_NAME"]
+# project_name = os.environ["PROJECT_NAME"]
+
+
+model_name = "LSTM-2"
+#os.environ["MODEL_NAME"]
+project_name = "SDWAN"
 
 #################################################################
 # CML model metrics
@@ -31,4 +37,46 @@ cr_number = model_deployments.model_deployments[0].crn
 # read metrics
 metrics = cdsw.read_metrics(model_deployment_crn=cr_number,dev=False)
 
-metrics_df = pd.json_normalize(metrics["metrics"])
+# metrics_df = pd.json_normalize(metrics["metrics"])
+
+
+performance_metrics = []
+core_metrics = []
+for item in metrics['metrics']:
+    if len(item['metrics'].keys()) < 5:
+         performance_metrics.append(item['metrics'])
+    else:
+        core_metrics.append(item['metrics'])
+
+        
+
+
+
+def check_last_rmse(values):
+    if len(values) < 2:
+        raise ValueError("The list must contain at least two values.")
+    
+    rmse_values = [item['rmse'] for item in values]
+    last_value = rmse_values[-1]
+    prior_values = rmse_values[:-1]
+    average_prior = sum(prior_values) / len(prior_values)
+    
+    if rmse_values[-1] < 5:
+        return True
+    else:
+        return false
+
+
+job_name = 'retrain_model'
+target_job = client.list_jobs(proj_id, search_filter=json.dumps({"name": job_name}))
+
+
+# todo 
+
+if check_last_rmse(performance_metrics):
+    # kick of retrain job
+                job_run = client.create_job_run(
+            cmlapi.CreateJobRunRequest(),
+            project_id = proj_id, 
+            job_id = target_job.jobs[0].id
+            )

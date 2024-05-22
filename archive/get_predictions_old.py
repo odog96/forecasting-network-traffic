@@ -51,10 +51,8 @@ df.sort_values(by=['time'],inplace=True)
 ### CML Model API 
 # model parameter configuration
 
-model_name = "lstm-test"
-#os.environ["MODEL_NAME"]
-project_name = "SDWAN"
-#os.environ["PROJECT_NAME"]
+model_name = os.environ["MODEL_NAME"]
+project_name = os.environ["PROJECT_NAME"]
 client = cmlapi.default_client(url=os.getenv("CDSW_API_URL").replace("/api/v1", ""), cml_api_key=os.getenv("CDSW_APIV2_KEY"))
 target_model = client.list_all_models(search_filter=json.dumps({"name": model_name}))
 model_key = target_model.models[0].access_key
@@ -122,7 +120,7 @@ for j,i in enumerate(range(0,df.shape[0]-(window),stride)):
             rx_gbs_values = matched_rows['rx_gbs'].tolist()
             tx_gbs_values = matched_rows['tx_gbs'].tolist()
             
-            cdsw.track_delayed_metrics({"final_rx_gbs_label": rx_gbs_values,"final_tx_gbs_label": tx_gbs_values}, val["uuid"])
+        cdsw.track_delayed_metrics({"final_rx_gbs_label": rx_gbs_values,"final_tx_gbs_label": tx_gbs_values}, val["uuid"])
             
     # monitoring step - Calculates desired model metrics based on predifined 
     # frequency
@@ -131,7 +129,6 @@ for j,i in enumerate(range(0,df.shape[0]-(window),stride)):
         m_recent_items = response_labels_sample[-m_window:]  # Get last m_window elements
 
         print('length of m recent items', len(m_recent_items))
-        print('iteration',j)
         
         start_timestamp_ms = m_recent_items[0]["timestamp_ms"]
         end_timestamp_ms = m_recent_items[-1]["timestamp_ms"]
@@ -170,5 +167,3 @@ for j,i in enumerate(range(0,df.shape[0]-(window),stride)):
                 end_timestamp_ms,
                 model_deployment_crn=cr_number,
             )
-        
-       
