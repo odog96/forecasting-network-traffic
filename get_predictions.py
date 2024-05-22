@@ -200,10 +200,10 @@ for j,i in enumerate(range(0,df.shape[0]-(window),stride)):
         target_job = client.list_jobs(proj_id, search_filter=json.dumps({"name": job_name}))
         
         if (j+1) > m_window:
-            job_run = client.create_job_run(
-            cmlapi.CreateJobRunRequest(),
-            project_id = proj_id, 
-            job_id = target_job.jobs[0].id
-            )
-            
-            # kick off check model job
+            go = True
+            while go:
+                try:
+                    job_run = client.create_job_run(cmlapi.CreateJobRunRequest(),project_id = proj_id, job_id = target_job.jobs[0].id)
+                    go = False
+                except:
+                     time.sleep(5)

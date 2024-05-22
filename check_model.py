@@ -64,7 +64,7 @@ def check_last_rmse(values):
     if rmse_values[-1] < 5:
         return True
     else:
-        return false
+        return False
 
 
 job_name = 'retrain_model'
