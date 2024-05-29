@@ -1,0 +1,54 @@
+name: Forecasting with LSTM on CML
+description: "End to End ML ops project"
+author: "Cloudera"
+date: "2024-05-29"
+specification_version: 1.0
+prototype_version: 1.0
+environment_variables:
+
+runtimes: 
+  - editor: JupyterLab
+    kernel: Python 3.10
+    edition: Nvidia GPU
+
+tasks:
+  - type: run_session
+    name: Install Dependencies
+    script: install-dependencies.py
+    short_summary: Install Dependencies
+    kernel: python3
+    cpu: 2
+    memory: 12
+
+  - type: create_job
+    name: Get Predictions simulation
+    entity_label: get_preds
+    script: get_predictions.py
+    arguments: None
+    short_summary: read new data iterate by window size, format, then send to model for inference. Kick of down stream jobs
+    cpu: 2
+    memory: 4
+    environment:
+      TASK_TYPE: CREATE/RUN_JOB
+      
+  - type: create_job
+    name: check_model
+    entity_label: check_model
+    script: check_model.py
+    arguments: None
+    short_summary: Check model performance
+    cpu: 2
+    memory: 4
+    environment:
+      TASK_TYPE: CREATE/RUN_JOB
+
+  - type: create_job
+    name: retrain_model
+    entity_label: retrain_model
+    script: retrain.py
+    arguments: None
+    short_summary: Check model performance
+    cpu: 2
+    memory: 4
+    environment:
+      TASK_TYPE: CREATE/RUN_JOB
