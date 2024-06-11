@@ -13,7 +13,6 @@ if os.environ.get("PROJECT_NAME") == "":
     os.environ["PROJECT_NAME"] = "SDWAN"
     
     
-    
 # model_name = os.environ["MODEL_NAME"]
 # project_name = os.environ["PROJECT_NAME"]
 
@@ -75,7 +74,7 @@ target_job = client.list_jobs(proj_id, search_filter=json.dumps({"name": job_nam
 
 if check_last_rmse(performance_metrics):
     # kick of retrain job
-                job_run = client.create_job_run(
+    job_run = client.create_job_run(
             cmlapi.CreateJobRunRequest(),
             project_id = proj_id, 
             job_id = target_job.jobs[0].id

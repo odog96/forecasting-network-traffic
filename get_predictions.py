@@ -202,6 +202,7 @@ for j,i in enumerate(range(0,df.shape[0]-(window),stride)):
         if (j+1) > m_window:
             go = True
             while go:
+                # error handling if prior job is still running
                 try:
                     job_run = client.create_job_run(cmlapi.CreateJobRunRequest(),project_id = proj_id, job_id = target_job.jobs[0].id)
                     go = False
