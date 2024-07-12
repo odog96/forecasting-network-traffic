@@ -14,13 +14,15 @@ if os.environ.get("MODEL_NAME") == "":
     os.environ["MODEL_NAME"] = "LSTM-2"
 if os.environ.get("PROJECT_NAME") == "":
     os.environ["PROJECT_NAME"] = "SDWAN"
-    
+
+
+# Ensure that Model Name matches variable above
+
 window = 24
 
 # function(s)
 def dataframe_to_json(df):
     """Create a dictionary that will later be converted to a JSON object
-    ensure that 
     """
     data = {
         'rx_gbs': df['rx_gbs'].iloc[-(window+1):].tolist(),
@@ -50,6 +52,8 @@ df.sort_values(by=['time'],inplace=True)
 ##########################################################################
 ### CML Model API 
 # model parameter configuration
+# there are series of steps required to cr_number, which is required to configure the model 
+# endpoint payload correctly - i.e., make sure we're calling the right model
 
 model_name = "LSTM-2"
 #os.environ["MODEL_NAME"]
@@ -70,17 +74,20 @@ cr_number = model_deployments.model_deployments[0].crn
 ##########################################################################
 
 
+# forecasting selection choices. 
+
 response_labels_sample = []
 
 stride = 12        # determines frequecy of model inference
                    # how many observations between forecast requests
-load_frequency = 2 # ratio of number of observations between load jobs
+load_frequency = 2 # determines how often ground truth is loaded 
+                   # ratio of number of observations between load jobs
                    # number of observations between forecast requests
                    # e.g., ground truth job every 24 hours, forecast request every 12, therefore load_frequency is 2 
 #load_lag = 1       # number of observation sets to load each load
                    # this will determine heap size
     
-m_window = 14      # currently setting to weekly
+m_window = 14      # Monitoring window.  Currently setting to weekly. 7 x 2 times/ day
 
 horizon = 6
 

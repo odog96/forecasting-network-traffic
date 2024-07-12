@@ -38,7 +38,6 @@ metrics = cdsw.read_metrics(model_deployment_crn=cr_number,dev=False)
 
 # metrics_df = pd.json_normalize(metrics["metrics"])
 
-
 performance_metrics = []
 core_metrics = []
 for item in metrics['metrics']:
@@ -46,10 +45,6 @@ for item in metrics['metrics']:
          performance_metrics.append(item['metrics'])
     else:
         core_metrics.append(item['metrics'])
-
-        
-
-
 
 def check_last_rmse(values):
     if len(values) < 2:
@@ -65,10 +60,8 @@ def check_last_rmse(values):
     else:
         return False
 
-
 job_name = 'retrain_model'
 target_job = client.list_jobs(proj_id, search_filter=json.dumps({"name": job_name}))
-
 
 # todo 
 
